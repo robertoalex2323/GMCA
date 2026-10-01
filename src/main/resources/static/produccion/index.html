@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GMCA - Produccion</title><link rel="stylesheet" href="/assets/css/app.css"></head>
+<body data-roles="ROLE_PRODUCCION,ROLE_GERENCIA">
+<header><div><strong>GMCA</strong><p class="kicker">Produccion</p></div><nav data-nav></nav></header>
+<main>
+  <section class="hero"><div><p class="kicker" data-user></p><h1>Molienda y programacion</h1><p>Registro de produccion programada y produccion extra sin precios.</p></div><button onclick="loadProduccion()">Actualizar</button></section>
+  <section class="two-col">
+    <article class="card"><h2>Registrar produccion</h2><form id="productionForm"><label>Producto terminado<select id="productionProduct" name="productId" required></select></label><label>Fecha<input name="productionDate" type="date" required></label><label>Cantidad<input name="quantity" type="number" min="0.001" step="0.001" required></label><label><span><input name="approvedExtra" type="checkbox" style="width:auto;min-height:auto"> Produccion extra autorizada</span></label><button>Registrar</button><p id="productionMsg" class="notice"></p></form></article>
+    <article class="card"><h2>Disponibilidad por arroz terminado</h2><div class="table-shell"><table><thead><tr><th>SKU</th><th>Producto</th><th>Stock</th><th>Produccion</th><th>Disponible</th></tr></thead><tbody id="productionBody"></tbody></table></div></article>
+  </section>
+</main>
+<script src="/assets/js/app.js"></script>
+<script>
+let products=[];
+async function loadProduccion(){products=(await api('/api/inventory/products')).filter(p=>p.type==='FINISHED_RICE');fillSelect('productionProduct',products,p=>`${p.sku} - ${p.name}`);const rows=await Promise.all(products.map(p=>api(`/api/inventory/availability/${p.id}`)));document.getElementById('productionBody').innerHTML=rows.map(r=>`<tr><td>${r.sku}</td><td>${r.name}</td><td>${fmtQty(r.stockPush)}</td><td>${fmtQty(r.programmedProduction)}</td><td><strong>${fmtQty(r.available)}</strong></td></tr>`).join('');}
+document.getElementById('productionForm').addEventListener('submit',async(e)=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));data.quantity=Number(data.quantity);data.approvedExtra=!!data.approvedExtra;try{await api('/api/inventory/production-plans',{method:'POST',body:JSON.stringify(data)});setNotice('productionMsg','Produccion registrada','ok');loadProduccion();}catch(err){setNotice('productionMsg',err.message,'error');}});
+document.addEventListener('DOMContentLoaded',()=>{document.querySelector('[name="productionDate"]').valueAsDate=new Date();setTimeout(loadProduccion,0);});
+</script>
+</body></html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Login GMCA</title>
+  <link rel="stylesheet" href="/assets/css/app.css">
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-brand">
+      <p class="kicker">Sistema de Gestion Comercial</p>
+      <h1>GMCA</h1>
+      <p>Control comercial, stock, produccion, deuda y despacho para la operacion arrocera.</p>
+      <div class="card-grid login-stats">
+        <div><span class="badge ok">JWT</span><p>Sesion segura por rol</p></div>
+        <div><span class="badge">MVC</span><p>Frontend y API integrados</p></div>
+      </div>
+    </section>
+
+    <section class="card login-card">
+      <form id="loginForm">
+        <div>
+          <p class="kicker">Acceso seguro</p>
+          <h2>Iniciar sesion</h2>
+        </div>
+        <label>Usuario
+          <input name="username" id="username" autocomplete="username" placeholder="gerencia" required>
+        </label>
+        <label>Clave
+          <div class="password-row">
+            <input name="password" id="password" type="password" autocomplete="current-password" placeholder="admin123" required>
+            <button type="button" class="secondary" id="togglePassword">Ver</button>
+          </div>
+        </label>
+        <button id="submitBtn" type="submit">Ingresar</button>
+        <p id="msg" class="notice"></p>
+      </form>
+
+      <div class="demo-users">
+        <p class="kicker">Usuarios de prueba</p>
+        <div class="actions">
+          <button type="button" class="secondary" data-demo="gerencia">Gerencia</button>
+          <button type="button" class="secondary" data-demo="ventas">Ventas</button>
+          <button type="button" class="secondary" data-demo="almacen">Almacen</button>
+          <button type="button" class="secondary" data-demo="produccion">Produccion</button>
+          <button type="button" class="secondary" data-demo="contabilidad">Contabilidad</button>
+          <button type="button" class="secondary" data-demo="despacho">Despacho</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const roleHome = {
+      ROLE_GERENCIA: '/admin/',
+      ROLE_VENTAS: '/ventas/',
+      ROLE_ALMACEN: '/almacen/',
+      ROLE_PRODUCCION: '/produccion/',
+      ROLE_CONTABILIDAD: '/contabilidad/',
+      ROLE_DESPACHO: '/despacho/'
+    };
+
+    document.querySelectorAll('[data-demo]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.getElementById('username').value = button.dataset.demo;
+        document.getElementById('password').value = 'admin123';
+      });
+    });
+
+    document.getElementById('togglePassword').addEventListener('click', () => {
+      const input = document.getElementById('password');
+      input.type = input.type === 'password' ? 'text' : 'password';
+      document.getElementById('togglePassword').textContent = input.type === 'password' ? 'Ver' : 'Ocultar';
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target));
+      const msg = document.getElementById('msg');
+      const submit = document.getElementById('submitBtn');
+      msg.textContent = 'Validando credenciales...';
+      msg.className = 'notice';
+      submit.disabled = true;
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error('Credenciales invalidas o usuario sin rol asignado');
+        const session = await response.json();
+        localStorage.setItem('gmca_token', session.token);
+        localStorage.setItem('gmca_username', session.username);
+        localStorage.setItem('gmca_roles', JSON.stringify(session.roles));
+        msg.textContent = 'Acceso correcto. Redirigiendo...';
+        msg.className = 'notice ok';
+        location.href = roleHome[session.roles[0]] || '/';
+      } catch (error) {
+        msg.textContent = error.message;
+        msg.className = 'notice error';
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

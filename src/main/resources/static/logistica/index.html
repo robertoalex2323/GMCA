@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GMCA - Logistica</title><link rel="stylesheet" href="/assets/css/app.css"></head>
+<body data-roles="ROLE_ALMACEN,ROLE_DESPACHO,ROLE_GERENCIA">
+<header><div><strong>GMCA</strong><p class="kicker">Logistica</p></div><nav data-nav></nav></header>
+<main>
+  <section class="hero"><div><p class="kicker" data-user></p><h1>Operaciones de planta</h1><p>Vista compartida de preparacion, vehiculos y estado de salida.</p></div><button onclick="loadLogistica()">Actualizar</button></section>
+  <section class="card-grid"><article class="card"><h3>Ordenes</h3><div class="metric" id="logOrders">0</div></article><article class="card"><h3>Cargadas</h3><div class="metric" id="logLoaded">0</div></article><article class="card"><h3>Bloqueadas</h3><div class="metric" id="logBlocked">0</div></article></section>
+  <section class="card" style="margin-top:16px"><h2>Flujo logistico</h2><div class="table-shell"><table><thead><tr><th>Cliente</th><th>Producto</th><th>Cantidad</th><th>Vehiculo</th><th>Estado</th></tr></thead><tbody id="logBody"></tbody></table></div></section>
+</main>
+<script src="/assets/js/app.js"></script>
+<script>
+async function loadLogistica(){const rows=await api('/api/dispatch/board');document.getElementById('logOrders').textContent=rows.length;document.getElementById('logLoaded').textContent=rows.filter(r=>r.status==='LOADED'||r.status==='GATE_RELEASED').length;document.getElementById('logBlocked').textContent=rows.filter(r=>r.status==='BLOCKED').length;document.getElementById('logBody').innerHTML=rows.map(r=>`<tr><td>${r.sale?.client?.businessName||''}</td><td>${r.sale?.product?.name||''}</td><td>${fmtQty(r.sale?.quantity||0)}</td><td>${r.vehicle?.plate||''}</td><td>${badge(r.status)}</td></tr>`).join('');}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(loadLogistica,0));
+</script>
+</body></html>

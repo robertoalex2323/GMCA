@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GMCA - Almacen</title><link rel="stylesheet" href="/assets/css/app.css"></head>
+<body data-roles="ROLE_ALMACEN,ROLE_GERENCIA">
+<header><div><strong>GMCA</strong><p class="kicker">Almacen</p></div><nav data-nav></nav></header>
+<main>
+  <section class="hero"><div><p class="kicker" data-user></p><h1>Stock Push matutino</h1><p>Registro de stock fisico y preparacion de pedidos sin precios.</p></div><button onclick="loadAlmacen()">Actualizar</button></section>
+  <section class="two-col">
+    <article class="card"><h2>Registrar stock fisico</h2><form id="stockForm"><label>Producto<select id="stockProduct" name="productId" required></select></label><label>Fecha<input name="stockDate" type="date" required></label><label>Cantidad fisica<input name="physicalStock" type="number" min="0" step="0.001" required></label><button>Registrar stock</button><p id="stockMsg" class="notice"></p></form></article>
+    <article class="card"><h2>Disponibilidad operativa</h2><div class="table-shell"><table><thead><tr><th>SKU</th><th>Producto</th><th>Tipo</th><th>Disponible</th></tr></thead><tbody id="stockBody"></tbody></table></div></article>
+  </section>
+  <section class="card" style="margin-top:16px"><h2>Preparacion de pedidos</h2><div class="table-shell"><table><thead><tr><th>Venta</th><th>Producto</th><th>Cantidad</th><th>Estado</th></tr></thead><tbody id="prepareBody"></tbody></table></div></section>
+</main>
+<script src="/assets/js/app.js"></script>
+<script>
+let products=[];
+async function loadAlmacen(){products=await api('/api/inventory/products');fillSelect('stockProduct',products,p=>`${p.sku} - ${p.name}`);const rows=await Promise.all(products.map(async p=>api(`/api/inventory/availability/${p.id}`)));document.getElementById('stockBody').innerHTML=rows.map(r=>`<tr><td>${r.sku}</td><td>${r.name}</td><td>${r.type}</td><td><strong>${fmtQty(r.available)}</strong></td></tr>`).join('');const dispatch=await api('/api/dispatch/board');document.getElementById('prepareBody').innerHTML=dispatch.map(d=>`<tr><td>${d.id}</td><td>${d.sale?.product?.name||''}</td><td>${fmtQty(d.sale?.quantity||0)}</td><td>${badge(d.status)}</td></tr>`).join('');}
+document.getElementById('stockForm').addEventListener('submit',async(e)=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));data.physicalStock=Number(data.physicalStock);try{await api('/api/inventory/stock-push',{method:'POST',body:JSON.stringify(data)});setNotice('stockMsg','Stock registrado','ok');loadAlmacen();}catch(err){setNotice('stockMsg',err.message,'error');}});
+document.addEventListener('DOMContentLoaded',()=>{document.querySelector('[name="stockDate"]').valueAsDate=new Date();setTimeout(loadAlmacen,0);});
+</script>
+</body></html>

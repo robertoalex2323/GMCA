@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GMCA - Despacho</title><link rel="stylesheet" href="/assets/css/app.css"></head>
+<body data-roles="ROLE_DESPACHO,ROLE_GERENCIA">
+<header><div><strong>GMCA</strong><p class="kicker">Despacho</p></div><nav data-nav></nav></header>
+<main>
+  <section class="hero"><div><p class="kicker" data-user></p><h1>Pizarra de carga</h1><p>Control de estados y salida en garita.</p></div><button onclick="loadDespacho()">Actualizar</button></section>
+  <section class="two-col">
+    <article class="card"><h2>Crear despacho</h2><form id="dispatchForm"><label>Venta<select id="dispatchSale" name="saleId" required></select></label><label>Vehiculo<select id="dispatchVehicle" name="vehicleId" required></select></label><button>Crear orden</button><p id="dispatchMsg" class="notice"></p></form></article>
+    <article class="card"><h2>Estados</h2><p>La salida en garita solo se confirma si la carga esta LOADED.</p><div class="actions"><span class="badge warn">PENDING</span><span class="badge warn">PREPARING</span><span class="badge ok">LOADED</span><span class="badge ok">GATE_RELEASED</span><span class="badge danger">BLOCKED</span></div></article>
+  </section>
+  <section class="card" style="margin-top:16px"><h2>Ordenes de despacho</h2><div class="table-shell"><table><thead><tr><th>Cliente</th><th>Producto</th><th>Vehiculo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="dispatchBody"></tbody></table></div></section>
+</main>
+<script src="/assets/js/app.js"></script>
+<script>
+async function loadDespacho(){const [sales,vehicles,orders]=await Promise.all([api('/api/sales'),api('/api/master/vehicles'),api('/api/dispatch/board')]);fillSelect('dispatchSale',sales,s=>`${s.client?.businessName||'Cliente'} - ${s.product?.name||'Producto'} - ${fmtQty(s.quantity)}`);fillSelect('dispatchVehicle',vehicles,v=>`${v.plate} - ${v.driverName||''}`);document.getElementById('dispatchBody').innerHTML=orders.map(o=>`<tr><td>${o.sale?.client?.businessName||''}</td><td>${o.sale?.product?.name||''}</td><td>${o.vehicle?.plate||''}</td><td>${badge(o.status)}</td><td><div class="actions"><button class="secondary" onclick="setStatus('${o.id}','PREPARING')">Preparando</button><button onclick="setStatus('${o.id}','LOADED')">Cargado</button><button class="warn" onclick="gateRelease('${o.id}')">Garita</button></div></td></tr>`).join('');}
+async function setStatus(id,status){try{await api(`/api/dispatch/${id}/status`,{method:'PATCH',body:JSON.stringify({status})});loadDespacho();}catch(err){alert(err.message);}}
+async function gateRelease(id){try{await api(`/api/dispatch/${id}/gate-release`,{method:'POST'});loadDespacho();}catch(err){alert(err.message);loadDespacho();}}
+document.getElementById('dispatchForm').addEventListener('submit',async(e)=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));try{await api('/api/dispatch',{method:'POST',body:JSON.stringify(data)});setNotice('dispatchMsg','Orden creada','ok');loadDespacho();}catch(err){setNotice('dispatchMsg',err.message,'error');}});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(loadDespacho,0));
+</script>
+</body></html>

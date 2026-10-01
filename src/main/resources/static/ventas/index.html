@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GMCA - Ventas</title><link rel="stylesheet" href="/assets/css/app.css"></head>
+<body data-roles="ROLE_VENTAS,ROLE_GERENCIA">
+<header><div><strong>GMCA</strong><p class="kicker">Ventas</p></div><nav data-nav></nav></header>
+<main>
+  <section class="hero"><div><p class="kicker" data-user></p><h1>Cotizacion y confirmacion</h1><p>Consulta disponibilidad y confirma ventas con revalidacion del backend.</p></div><button onclick="loadVentas()">Actualizar</button></section>
+  <section class="two-col">
+    <article class="card"><h2>Disponibilidad</h2><form id="availabilityForm"><label>Producto<select id="availabilityProduct" required></select></label><button>Consultar</button></form><div id="availabilityResult" class="card hidden" style="margin-top:12px"></div></article>
+    <article class="card"><h2>Confirmar venta</h2><form id="saleForm"><div class="form-grid"><label>Cliente<select id="saleClient" name="clientId" required></select></label><label>Producto<select id="saleProduct" name="productId" required></select></label><label>Cantidad<input name="quantity" type="number" min="0.001" step="0.001" required></label><label>Precio unitario<input name="unitPrice" type="number" min="0.01" step="0.01" required></label></div><label><span><input name="priceExceptionAuthorized" type="checkbox" style="width:auto;min-height:auto"> Precio excepcional autorizado</span></label><label><span><input name="creditExceptionAuthorized" type="checkbox" style="width:auto;min-height:auto"> Credito excepcional autorizado</span></label><button>Confirmar venta</button><p id="saleMsg" class="notice"></p></form></article>
+  </section>
+  <section class="card" style="margin-top:16px"><h2>Ventas recientes</h2><div class="table-shell"><table><thead><tr><th>Cliente</th><th>Producto</th><th>Cantidad</th><th>Precio</th><th>Estado</th></tr></thead><tbody id="salesBody"></tbody></table></div></section>
+</main>
+<script src="/assets/js/app.js"></script>
+<script>
+let products=[]; let clients=[];
+async function loadVentas(){ products=await api('/api/inventory/products'); clients=await api('/api/master/clients'); const sales=await api('/api/sales'); fillSelect('availabilityProduct',products,p=>`${p.sku} - ${p.name}`); fillSelect('saleProduct',products,p=>`${p.sku} - ${p.name} (${fmtMoney(p.basePrice)})`); fillSelect('saleClient',clients,c=>`${c.businessName} - deuda ${fmtMoney(c.currentDebt)}`); document.getElementById('salesBody').innerHTML=sales.map(s=>`<tr><td>${s.client?.businessName||''}</td><td>${s.product?.name||''}</td><td>${fmtQty(s.quantity)}</td><td>${fmtMoney(s.unitPrice)}</td><td><span class="badge ok">${s.status}</span></td></tr>`).join(''); }
+document.getElementById('availabilityForm').addEventListener('submit',async(e)=>{e.preventDefault();const id=document.getElementById('availabilityProduct').value;const r=await api(`/api/inventory/availability/${id}`);const el=document.getElementById('availabilityResult');el.classList.remove('hidden');el.innerHTML=`<h3>${r.name}</h3><p>Tipo: ${r.type}</p><div class="card-grid"><div><span class="kicker">Stock</span><div class="metric">${fmtQty(r.stockPush)}</div></div><div><span class="kicker">Produccion</span><div class="metric">${fmtQty(r.programmedProduction)}</div></div><div><span class="kicker">Comprometido</span><div class="metric">${fmtQty(r.committed)}</div></div><div><span class="kicker">Disponible</span><div class="metric">${fmtQty(r.available)}</div></div></div>`;});
+document.getElementById('saleForm').addEventListener('submit',async(e)=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));data.quantity=Number(data.quantity);data.unitPrice=Number(data.unitPrice);data.priceExceptionAuthorized=!!data.priceExceptionAuthorized;data.creditExceptionAuthorized=!!data.creditExceptionAuthorized;try{await api('/api/sales/confirm',{method:'POST',body:JSON.stringify(data)});setNotice('saleMsg','Venta confirmada','ok');e.target.reset();loadVentas();}catch(err){setNotice('saleMsg',err.message,'error');}});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(loadVentas,0));
+</script>
+</body></html>

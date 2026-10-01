@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GMCA - Contabilidad</title><link rel="stylesheet" href="/assets/css/app.css"></head>
+<body data-roles="ROLE_CONTABILIDAD,ROLE_GERENCIA">
+<header><div><strong>GMCA</strong><p class="kicker">Contabilidad</p></div><nav data-nav></nav></header>
+<main>
+  <section class="hero"><div><p class="kicker" data-user></p><h1>Validacion financiera</h1><p>Monitoreo de deuda, ventas confirmadas y facturacion pendiente.</p></div><button onclick="loadContabilidad()">Actualizar</button></section>
+  <section class="card-grid"><article class="card"><h3>Clientes con deuda</h3><div class="metric" id="debtClients">0</div></article><article class="card"><h3>Deuda total</h3><div class="metric" id="totalDebt">S/ 0.00</div></article><article class="card"><h3>Ventas confirmadas</h3><div class="metric" id="totalSales">0</div></article></section>
+  <section class="card" style="margin-top:16px"><h2>Cartera de clientes</h2><div class="table-shell"><table><thead><tr><th>Cliente</th><th>Documento</th><th>Credito</th><th>Deuda</th><th>Uso</th></tr></thead><tbody id="debtBody"></tbody></table></div></section>
+  <section class="card" style="margin-top:16px"><h2>Ventas por facturar</h2><div class="table-shell"><table><thead><tr><th>Cliente</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Estado</th></tr></thead><tbody id="invoiceBody"></tbody></table></div></section>
+</main>
+<script src="/assets/js/app.js"></script>
+<script>
+async function loadContabilidad(){const [clients,sales]=await Promise.all([api('/api/master/clients'),api('/api/sales')]);const debtClients=clients.filter(c=>Number(c.currentDebt)>0);document.getElementById('debtClients').textContent=debtClients.length;document.getElementById('totalDebt').textContent=fmtMoney(clients.reduce((s,c)=>s+Number(c.currentDebt||0),0));document.getElementById('totalSales').textContent=sales.length;document.getElementById('debtBody').innerHTML=clients.map(c=>{const pct=Number(c.creditLimit)>0?Math.round(Number(c.currentDebt||0)*100/Number(c.creditLimit)):0;return `<tr><td>${c.businessName}</td><td>${c.documentNumber}</td><td>${fmtMoney(c.creditLimit)}</td><td>${fmtMoney(c.currentDebt)}</td><td><span class="badge ${pct>80?'danger':pct>50?'warn':'ok'}">${pct}%</span></td></tr>`}).join('');document.getElementById('invoiceBody').innerHTML=sales.map(s=>`<tr><td>${s.client?.businessName||''}</td><td>${s.product?.name||''}</td><td>${fmtQty(s.quantity)}</td><td>${fmtMoney(Number(s.quantity||0)*Number(s.unitPrice||0))}</td><td><span class="badge warn">Pendiente factura</span></td></tr>`).join('');}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(loadContabilidad,0));
+</script>
+</body></html>

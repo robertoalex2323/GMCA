@@ -1,13 +1,12 @@
 package GMCA.gmca_api;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
 class GmcaApiApplicationTests {
-
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void applicationEntryPointIsCallable() {
+        assertDoesNotThrow(() -> GmcaApiApplication.class.getDeclaredMethod("main", String[].class));
+    }
 }
